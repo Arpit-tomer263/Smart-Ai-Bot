@@ -1,0 +1,8 @@
+python-telegram-bot
+pylint 
+requests
+websocket-client==0.56
+pandas
+numpy
+telegram
+pytz
