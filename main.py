@@ -1541,6 +1541,8 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     current_position = 'to_get_strategy'
                     if msg == '0':
                         await update.message.reply_text("Reverse One step.")
+                        context.user_data['pair_recive'] = True
+                        context.user_data['timeframe_recive'] = False
                         context.user_data['strategy_recive'] = None
                         context.user_data['timeframe_recive'] = None
                         return
@@ -1554,7 +1556,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                                 context.user_data['strategy'] = strategies
                                 await update.message.reply_text(f"Strategies Confirmed: {', '.join(map(str, strategies))}.")
                                 await update.message.reply_text("Specify the date range using one of the following formats:")
-                                await update.message.reply_text("Enter a date range (e.g., 24/12/2024 to 26/12/2024).")
+                                await update.message.reply_text("1. Enter the sigle date (e.g., 24/12/2024)")
                                 await update.message.reply_text("2. The word 'ALL'")
                                 await update.message.reply_text("3. A range of dates (e.g., 24/12/2024 to 26/12/2024)")
                             else:
