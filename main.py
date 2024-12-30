@@ -517,7 +517,8 @@ def initialize_user(user_id):
             'Loss':0,
             'is_running': True,
             'Total_mtg':0,
-            'waiting_for_report':None
+            'waiting_for_report':None,
+            'admin': False
         }
 
 
@@ -1351,6 +1352,14 @@ signal_task = None
 
 
 async def check_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
     context.user_data['step'] = None
     context.user_data['waiting_for_timeframe'] = False
     context.user_data['gap'] = False
@@ -1380,11 +1389,12 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if context.user_data.get('waiting_for_key'):
         user_key = update.message.text
-        admin_key = "Pranav125"
-        Cm_key = "user125"
+        admin_key = get_password('admin')
+        Cm_key = get_password('user')
        
         if user_key in [admin_key]:
             initialize_user(user_id)
+            user_data[user_id]['admin'] = True
             context.user_data.pop('waiting_for_key', None)
             print(f'Welcome Pranav sir to Smart AI Bot admin panel')
             await update.message.reply_text(f"Welcome Pranav sir to Smart AI Bot admin panel")
@@ -1395,6 +1405,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 4) /set_strategy--> Set Strategy
 5) /dis_str --> Display strategy
 6) /chng_datasrc --> Change Datasource
+7) /change_password --> Change Password
     """
 
             await update.message.reply_text(msg)
@@ -1718,8 +1729,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await update.message.reply_text(f"Strategy is not set please enter vaild value i.e 1,2")
         except Exception as e:
             print("ERROR in giving strategy:",e)
-    elif context.user_data.get('waiting_for_MTG'):
-        
+    elif context.user_data.get('waiting_for_MTG'):   
         try:
             mtgs = int(update.message.text.strip().upper())
             
@@ -1769,12 +1779,87 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await update.message.reply_text("Please choose 1 or 2")
         except Exception as e:
             print("Error in Changing datasource:",e)
+    
+    elif context.user_data.get('waiting_for_password'):
+        input = update.message.text
+        if input == '1' or input == 1:
+            await update.message.reply_text("Please enter the new key.")
+            context.user_data['waiting_for_new_key'] = 'admin'
+            context.user_data['waiting_for_password'] = False
+        elif input == '2' or input == 2:
+            await update.message.reply_text("Please enter the new key.")
+            context.user_data['waiting_for_new_key'] = 'user'
+            context.user_data['waiting_for_password'] = False
+        else:
+            await update.message.reply_text("Invalid input. Please enter 1 or 2.")
+            return
+
+    elif context.user_data.get('waiting_for_new_key'):
+        password = update.message.text
+        key_type = context.user_data.pop('waiting_for_new_key')
+        load_password(password, key_type)
+        await update.message.reply_text("The key has been successfully updated.")
+
+        context.user_data['waiting_for_new_key'] = False
 
 
+def get_password(type):
+    File = 'password.json'
+
+    # Load existing data from the file, if it exists
+    if os.path.exists(File):
+        with open(File, 'r') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                data = {}
+    else:
+        data = {}
+
+    # Get the password based on the type
+    if type == 'admin':
+        return data.get('admin')
+    elif type == 'user':
+        return data.get('user')
+    else:
+        raise ValueError("Invalid type. Must be 'admin' or 'user'.")
+
+def load_password(password, type):
+    File = 'password.json'
+
+    # Load existing data from the file, if it exists
+    if os.path.exists(File):
+        with open(File, 'r') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                data = {}
+    else:
+        data = {}
+
+    # Update the password based on the type
+    if type == 'admin':
+        data['admin'] = password
+    elif type == 'user':
+        data['user'] = password
+    else:
+        raise ValueError("Invalid type. Must be 'admin' or 'user'.")
+
+    # Save the updated data back to the file
+    with open(File, 'w') as file:
+        json.dump(data, file, indent=4)
 
 
 
 async def change_data_source(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
     context.user_data['brokerage'] = False
     context.user_data['why'] = True
     context.user_data['pair_recive'] = False
@@ -1805,6 +1890,24 @@ async def change_data_source(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def dis_str(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
+    context.user_data['brokerage'] = False
+    context.user_data['why'] = True
+    context.user_data['pair_recive'] = False
+    context.user_data['timeframe_recive'] = None
+    context.user_data['strategy_recive'] = None
+    context.user_data['waiting_for_timeframe'] = False
+    context.user_data['gap'] = False
+    context.user_data['waiting_for_Strategy'] = False
+    context.user_data['waiting_for_pair'] = False
+    context.user_data['Datasource'] = False
     load = load_mtg()
     if load == 'ON':
         await update.message.reply_text("The strategy is displayed alongside the signals.To adjust the display, please select:")
@@ -1949,6 +2052,14 @@ def load_pairs():
         return []
     
 async def set_pair(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
     context.user_data['brokerage'] = False
     context.user_data['why'] = True
     context.user_data['pair_recive'] = False
@@ -2186,22 +2297,7 @@ def Upload_mtg(status):
         json.dump({"status": status}, f, indent=4)
 
 
-async def ocmtg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['brokerage'] = False
-    context.user_data['why'] = True
-    context.user_data['pair_recive'] = False
-    context.user_data['timeframe_recive'] = None
-    context.user_data['strategy_recive'] = None
-    context.user_data['waiting_for_timeframe'] = False
-    context.user_data['gap'] = False
-    context.user_data['waiting_for_Strategy'] = False
-    context.user_data['waiting_for_pair'] = False
-    context.user_data['Datasource'] = False
-    mtg = load_mtg()
-    status = mtg.get("status", "OFF")  # Default to OFF if not set
-    await update.message.reply_text(f"Currently, MTG is set to {status}.")
-    await update.message.reply_text("If you want to change it, please reply with either 'ON' or 'OFF'.")
-    context.user_data['waiting_for_MTG'] = True
+
 
 
 
@@ -2303,6 +2399,14 @@ async def start_signal_generation(update: Update, context: ContextTypes.DEFAULT_
 
 
 async def set_strategy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
     context.user_data['brokerage'] = False
     context.user_data['why'] = True
     context.user_data['pair_recive'] = False
@@ -2323,6 +2427,14 @@ async def set_strategy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['waiting_for_Strategy'] = True
 
 async def settf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['waiting_for_password'] = False
+    context.user_data['waiting_for_new_key'] = False
     context.user_data['brokerage'] = False
     context.user_data['why'] = True
     context.user_data['pair_recive'] = False
@@ -2382,7 +2494,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Initialize user data if not already done
     initialize_user(user_id)
-
+    initialize_p_L(user_id)
     # Calculate accuracy and other statistics for the user
     if user_data[user_id]['Total_signal'] != 0:
         Accuracy = (user_data[user_id]['total_win'] / user_data[user_id]['Total_signal']) * 100
@@ -2420,6 +2532,29 @@ P&L: {PnL[user_id]['amount']}
     user_data[user_id]['MTG'] = 0
     del PnL[user_id]
 
+async def change_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        initialize_user(user_id)
+    if not user_data[update.effective_user.id]['admin']:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+    context.user_data['brokerage'] = False
+    context.user_data['why'] = True
+    context.user_data['pair_recive'] = False
+    context.user_data['timeframe_recive'] = None
+    context.user_data['strategy_recive'] = None
+    context.user_data['waiting_for_timeframe'] = False
+    context.user_data['gap'] = False
+    context.user_data['waiting_for_Strategy'] = False
+    context.user_data['waiting_for_MTG'] = False
+    context.user_data['waiting_for_pair'] = False
+    context.user_data['Datasource'] = False
+    await update.message.reply_text("Which password would you like to change?")
+    await update.message.reply_text("1) Admin Password\n2) User Password")
+    context.user_data['waiting_for_password'] = True
+
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = """
 1) /check_reports--> Check Reports
@@ -2428,6 +2563,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4) /set_strategy--> Set Strategy
 5) /dis_str --> Display strategy
 6) /chng_datasrc --> Change Datasource
+7) /change_password --> Change Password
     """
     await update.message.reply_text(msg)
                 
@@ -2439,13 +2575,13 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("stop", stop))
     application.add_handler(CommandHandler("check_reports", check_report))
-    application.add_handler(CommandHandler("mtg_option", ocmtg))
     application.add_handler(CommandHandler("set_tf", settf))
     application.add_handler(CommandHandler("Set_Pairs",set_pair))
     application.add_handler(CommandHandler("set_strategy",set_strategy))
     application.add_handler(CommandHandler("dis_str",dis_str))
     application.add_handler(CommandHandler("chng_datasrc",change_data_source))
     application.add_handler(CommandHandler("menu759",menu))
+    application.add_handler(CommandHandler("change_password", change_password))
 
     # MessageHandler for key and currency pairs
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
